@@ -1,10 +1,12 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:foodapp/models/categorydto.dart';
 import 'package:foodapp/models/tofooditemdto.dart';
 import 'package:foodapp/screens/fooddetailscreen.dart';
 import 'package:foodapp/screens/ordercreen.dart';
 import 'package:foodapp/screens/userprofilescreen.dart';
+import 'package:foodapp/services/categoryservice.dart';
 import 'package:foodapp/services/foodservices.dart';
 import 'package:foodapp/services/securestorageservice.dart';
 
@@ -20,11 +22,26 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  int? _selectedCategoryId;
+  String? _searchName;
   List<ToFoodItemDto> _foods=[];
+  List<CategoryDto> _categories=[];
   bool _isLoading=true;
   int _currentPage = 1;
   final int _pageSize = 5;
   String? _username;
+  Future<void> _fetchCategories() async{
+    try{
+      final category= await CategoryService().getAllCategory();
+      setState(() {
+        _categories=[
+          CategoryDto(categoryId: -1, name: 'Tất cả'),...category
+        ];
+      });
+    }catch(e){
+      print('Lỗi lấy category: $e');
+    }
+  }
   Future<void> _checkLogin() async{
     final token= await SecureStorageService().getToken();
     if(token!=null&& token.isNotEmpty){
@@ -76,11 +93,12 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState(){
     super.initState();
     _fetchFood();
+    _fetchCategories();
     _checkLogin();
   }
   Future<void> _fetchFood() async{
     try{
-      final foods=await FoodService().getAllFoods(page: _currentPage,size: _pageSize);
+      final foods=await FoodService().getAllFoods(page: _currentPage,size: _pageSize,searchName: _searchName,categoryId: _selectedCategoryId);
       setState(() {
         _foods=foods;
         _isLoading=false;
@@ -204,6 +222,51 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       body: Column(
         children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: Column(
+              children: [
+                // Tìm kiếm
+                TextField(
+                  decoration: InputDecoration(
+                    hintText: '🔍 Tìm món ăn...',
+                    prefixIcon: const Icon(Icons.search),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  onChanged: (value) {
+                    setState(() {
+                      _searchName = value;
+                      _currentPage = 1;
+                    });
+                    _fetchFood();
+                  },
+                ),
+                const SizedBox(height: 12),
+
+                // Dropdown lọc theo danh mục
+                DropdownButtonFormField<int>(
+                  value: _selectedCategoryId ?? -1,
+                  items: _categories.map((category) {
+                    return DropdownMenuItem<int>(
+                      value: category.categoryId,
+                      child: Text(category.name),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    setState(() {
+                      _selectedCategoryId = value == -1 ? null : value;
+                      _currentPage = 1;
+                    });
+                    _fetchFood();
+                  },
+                  decoration: InputDecoration(
+                    labelText: '📂 Chọn danh mục',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              ],
+            ),
+          ),
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())

@@ -9,8 +9,19 @@ class FoodService{
   static final FoodService _instance = FoodService._internal();
   factory FoodService() => _instance;
   FoodService._internal();
-  Future<List<ToFoodItemDto>> getAllFoods({int page = 1, int size = 2}) async{
-    final url=Uri.parse('$apiEndpoint?PageNumber=$page&PageSize=$size');
+  Future<List<ToFoodItemDto>> getAllFoods({int page = 1, int size = 2,String? searchName,int? categoryId}) async{
+    final queryParams={
+      'PageNumber':page.toString(),
+      'PageSize':size.toString()
+    };
+    if(searchName!=null && searchName.isNotEmpty){
+      queryParams['SearchName']=searchName;
+    }
+    if(categoryId!=null){
+      queryParams['CategoryId'] = categoryId.toString();
+    }
+    final url=Uri.http('10.0.2.2:5001','/api/fooditem',queryParams);
+    // final url=Uri.parse('$apiEndpoint?PageNumber=$page&PageSize=$size');
     final response=await http.get(url);
     if(response.statusCode==200){
       final List<dynamic> jsonList=jsonDecode(response.body);
