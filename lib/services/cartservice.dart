@@ -109,6 +109,23 @@ class CartService{
       throw Exception('Không thể tạo đơn hàng: ${response.body}');
     }
   }
+  Future<String> createVnPayOrder(CreateOrderDto dto, String token) async{
+    final url= Uri.parse('http://10.0.2.2:5001/api/Order/create-vnpay');
+    final response= await http.post(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode(dto.toJson()),
+    );
+    if(response.statusCode==200){
+      final data=jsonDecode(response.body);
+      return data['paymentUrl'];
+    }else{
+      throw Exception('Không thể tạo đơn hàng: ${response.body}');
+    }
+  }
   Future<void> deleteCartItems(int cartItemId, String token) async{
     final url=Uri.parse('$apiEndpoint/$cartItemId');
     final response= await http.delete(

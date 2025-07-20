@@ -134,6 +134,31 @@ class _CartScreenState extends State<CartScreen> {
     );
 
   }
+  Future<void> _showVnPayAddressDialog() async{
+    final addressController= TextEditingController();
+    await showDialog(
+        context: context, builder: (context)=>AlertDialog(
+      title: const Text('Nhập địa chỉ giao hàng'),
+      content: TextField(
+        controller: addressController,
+        decoration: const InputDecoration(hintText: 'VD: 123 đường ABC, Quận 1'),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Hủy'),
+        ),
+        TextButton(
+          onPressed: () async {
+            Navigator.pop(context);
+            await _handleVnPayment(addressController.text);
+          },
+          child: const Text('Xác nhận'),
+        ),
+      ],
+    )
+    );
+  }
   Future<void> _handleMomoPayment(String address) async {
     final token= await SecureStorageService().getToken();
     if(token==null) return;
@@ -152,6 +177,26 @@ class _CartScreenState extends State<CartScreen> {
         SnackBar(content: Text('Lỗi khi tạo thanh toán: $e')),
       );
     }
+  }
+  Future<void> _handleVnPayment(String address) async{
+    final token= await SecureStorageService().getToken();
+    if(token==null) return;
+    try{
+      final paymentUrl=await CartService().createVnPayOrder(
+          CreateOrderDto(shippingAddress: address),
+          token
+      );
+      if(await canLaunchUrl(Uri.parse(paymentUrl))){
+        await launchUrl(Uri.parse(paymentUrl), mode: LaunchMode.externalApplication);
+      }else{
+        throw Exception('Không thể mở liên kết');
+      }
+    }catch(e){
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Lỗi khi tạo thanh toán: $e')),
+      );
+    }
+
   }
   Future<void> _removeItem(CartItemDto item) async {
     final token = await SecureStorageService().getToken();
@@ -324,6 +369,11 @@ class _CartScreenState extends State<CartScreen> {
                   ElevatedButton(
                     onPressed: _selectedTotal > 0 ? _showAddressDialog : null,
                     child: const Text('Thanh toán MoMo'),
+                  ),
+                  const SizedBox(height: 8),
+                  ElevatedButton(
+                    onPressed: _selectedTotal > 0 ? _showVnPayAddressDialog : null,
+                    child: const Text('Thanh toán VNPay'),
                   ),
                 ],
               ),
